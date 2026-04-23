@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NexaCloud — Intelligent Infrastructure Solutions</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1a1a2e; background: #f8f9fb; }
+
+    /* NAV */
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 18px 64px; background: #fff; border-bottom: 1px solid #e8eaf0; position: sticky; top: 0; z-index: 10; }
+    .logo { font-size: 1.3rem; font-weight: 700; color: #2563eb; letter-spacing: -0.5px; }
+    .nav-links a { margin-left: 32px; text-decoration: none; color: #555; font-size: 0.92rem; }
+    .nav-links a:hover { color: #2563eb; }
+    .nav-cta { background: #2563eb; color: #fff; padding: 9px 22px; border-radius: 6px; font-size: 0.9rem; text-decoration: none; }
+    .nav-cta:hover { background: #1d4ed8; color: #fff !important; }
+
+    /* HERO */
+    .hero { padding: 100px 64px 80px; text-align: center; background: linear-gradient(135deg, #eff6ff 0%, #f8f9fb 60%); }
+    .hero h1 { font-size: 3rem; font-weight: 800; color: #0f172a; line-height: 1.15; max-width: 700px; margin: 0 auto 20px; }
+    .hero h1 span { color: #2563eb; }
+    .hero p { font-size: 1.15rem; color: #64748b; max-width: 560px; margin: 0 auto 36px; line-height: 1.7; }
+    .hero-btns { display: flex; gap: 14px; justify-content: center; }
+    .btn-primary { background: #2563eb; color: #fff; padding: 13px 28px; border-radius: 8px; font-size: 0.95rem; text-decoration: none; font-weight: 600; }
+    .btn-secondary { background: #fff; color: #2563eb; padding: 13px 28px; border-radius: 8px; font-size: 0.95rem; text-decoration: none; font-weight: 600; border: 1.5px solid #2563eb; }
+
+    /* STATS */
+    .stats { display: flex; justify-content: center; gap: 60px; padding: 48px 64px; background: #fff; border-top: 1px solid #e8eaf0; border-bottom: 1px solid #e8eaf0; }
+    .stat { text-align: center; }
+    .stat-num { font-size: 2.2rem; font-weight: 800; color: #2563eb; }
+    .stat-label { font-size: 0.88rem; color: #64748b; margin-top: 4px; }
+
+    /* FEATURES */
+    .features { padding: 80px 64px; }
+    .features h2 { text-align: center; font-size: 2rem; font-weight: 700; margin-bottom: 48px; }
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; max-width: 1100px; margin: 0 auto; }
+    .feature-card { background: #fff; border: 1px solid #e8eaf0; border-radius: 12px; padding: 32px; }
+    .feature-icon { font-size: 2rem; margin-bottom: 16px; }
+    .feature-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
+    .feature-card p { font-size: 0.9rem; color: #64748b; line-height: 1.7; }
+
+    /* BLOG */
+    .blog { padding: 80px 64px; background: #f8f9fb; }
+    .blog h2 { text-align: center; font-size: 2rem; font-weight: 700; margin-bottom: 48px; }
+    .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1100px; margin: 0 auto; }
+    .blog-card { background: #fff; border: 1px solid #e8eaf0; border-radius: 12px; overflow: hidden; }
+    .blog-card-img { height: 160px; background: linear-gradient(135deg, #dbeafe, #bfdbfe); display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+    .blog-card-body { padding: 20px; }
+    .blog-tag { font-size: 0.75rem; font-weight: 600; color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px; }
+    .blog-card h3 { font-size: 1rem; font-weight: 700; margin: 8px 0 10px; }
+    .blog-card p { font-size: 0.875rem; color: #64748b; line-height: 1.6; }
+    .blog-date { font-size: 0.8rem; color: #94a3b8; margin-top: 12px; }
+
+    /* FOOTER */
+    footer { background: #0f172a; color: #94a3b8; text-align: center; padding: 32px 64px; font-size: 0.875rem; }
+    footer a { color: #64748b; text-decoration: none; margin: 0 12px; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">NexaCloud</div>
+  <div class="nav-links">
+    <a href="#">Products</a>
+    <a href="#">Solutions</a>
+    <a href="#">Pricing</a>
+    <a href="#">Blog</a>
+    <a href="#">Company</a>
+    <a href="#" class="nav-cta">Get Started</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>Intelligent <span>Cloud Infrastructure</span> for Modern Teams</h1>
+  <p>NexaCloud delivers enterprise-grade hosting, monitoring, and deployment pipelines — so your team can ship faster with confidence.</p>
+  <div class="hero-btns">
+    <a href="#" class="btn-primary">Start Free Trial</a>
+    <a href="#" class="btn-secondary">View Demo</a>
+  </div>
+</section>
+
+<section class="stats">
+  <div class="stat"><div class="stat-num">99.99%</div><div class="stat-label">Uptime SLA</div></div>
+  <div class="stat"><div class="stat-num">12,000+</div><div class="stat-label">Active Customers</div></div>
+  <div class="stat"><div class="stat-num">40ms</div><div class="stat-label">Avg. Response Time</div></div>
+  <div class="stat"><div class="stat-num">18</div><div class="stat-label">Global Regions</div></div>
+</section>
+
+<section class="features">
+  <h2>Everything you need to scale</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🚀</div>
+      <h3>One-Click Deployments</h3>
+      <p>Push your code and we handle the rest. Automated builds, rollbacks, and zero-downtime deploys out of the box.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <h3>Built-In Security</h3>
+      <p>DDoS protection, WAF, automatic TLS certificates, and SOC 2 compliant infrastructure included on every plan.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>Real-Time Observability</h3>
+      <p>Metrics, logs, and traces in a single pane of glass. Set alerts and resolve incidents before your users notice.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>Edge Network</h3>
+      <p>Serve assets from 200+ PoPs worldwide. Intelligent routing automatically picks the fastest path to every user.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔧</div>
+      <h3>Developer-First API</h3>
+      <p>Full REST and GraphQL APIs, Terraform provider, and GitHub Actions integration. Automate everything.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💬</div>
+      <h3>24/7 Expert Support</h3>
+      <p>Human engineers, not bots. Average first response under 3 minutes on all paid plans.</p>
+    </div>
+  </div>
+</section>
+
+<section class="blog">
+  <h2>From the Blog</h2>
+  <div class="blog-grid">
+    <div class="blog-card">
+      <div class="blog-card-img">☁️</div>
+      <div class="blog-card-body">
+        <div class="blog-tag">Infrastructure</div>
+        <h3>Why Multi-Region Failover Is No Longer Optional</h3>
+        <p>Lessons from three major outages in 2024 and what every engineering team should take away.</p>
+        <div class="blog-date">March 14, 2025</div>
+      </div>
+    </div>
+    <div class="blog-card">
+      <div class="blog-card-img">🔐</div>
+      <div class="blog-card-body">
+        <div class="blog-tag">Security</div>
+        <h3>Zero Trust Networking: A Practical Guide for Small Teams</h3>
+        <p>You don't need a 50-person security team to implement zero trust. Here's where to start.</p>
+        <div class="blog-date">February 28, 2025</div>
+      </div>
+    </div>
+    <div class="blog-card">
+      <div class="blog-card-img">📦</div>
+      <div class="blog-card-body">
+        <div class="blog-tag">DevOps</div>
+        <h3>Container Orchestration in 2025: Kubernetes vs. Managed Alternatives</h3>
+        <p>An honest comparison for teams who just want their containers to run reliably without the overhead.</p>
+        <div class="blog-date">January 9, 2025</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2025 NexaCloud Technologies, Inc. All rights reserved.</p>
+  <p style="margin-top:12px">
+    <a href="#">Privacy</a><a href="#">Terms</a><a href="#">Security</a><a href="#">Status</a>
+  </p>
+</footer>
+
+</body>
+</html>

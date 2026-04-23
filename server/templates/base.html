@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}C2//OPS{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #21262d;
+      --green:    #00ff41;
+      --green-dim:#00c832;
+      --cyan:     #00d4ff;
+      --red:      #ff4444;
+      --yellow:   #ffd700;
+      --orange:   #ff8c00;
+      --purple:   #c084fc;
+      --text:     #c9d1d9;
+      --muted:    #484f58;
+      --font-mono:'JetBrains Mono', monospace;
+      --font-ui:  'Inter', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font-ui); font-size: 14px; min-height: 100vh;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,255,65,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,65,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center; gap: 24px;
+      padding: 0 24px; height: 54px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+
+    /* Logo */
+    .topbar-logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .logo-text { font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700; color: var(--green); letter-spacing: 1px; }
+    .logo-text span { color: var(--muted); }
+    .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s infinite; }
+    @keyframes pulse-dot { 0%,100%{box-shadow:0 0 0 0 rgba(0,255,65,.5)} 50%{box-shadow:0 0 0 5px rgba(0,255,65,0)} }
+
+    /* Nav tabs */
+    .topbar-nav { display: flex; align-items: center; gap: 4px; }
+    .nav-tab {
+      font-family: var(--font-mono); font-size: 0.78rem; padding: 6px 14px;
+      border-radius: 5px; text-decoration: none; color: var(--muted);
+      transition: color 0.15s, background 0.15s; border: 1px solid transparent;
+    }
+    .nav-tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .nav-tab.active { color: var(--green); border-color: rgba(0,255,65,0.25); background: rgba(0,255,65,0.06); }
+
+    /* Stats strip */
+    .topbar-stats { display: flex; gap: 20px; align-items: center; }
+    .tstat { text-align: center; }
+    .tstat-val   { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--cyan); line-height: 1; }
+    .tstat-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+    .tstat.s-active  .tstat-val { color: var(--green); }
+    .tstat.s-dead    .tstat-val { color: var(--red); }
+    .tstat.s-pending .tstat-val { color: var(--yellow); }
+
+    /* Actions */
+    .topbar-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .op-label { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
+    .op-label span { color: var(--green); }
+    .logout-link {
+      font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted);
+      border: 1px solid var(--border); border-radius: 4px;
+      padding: 4px 10px; text-decoration: none; transition: color .15s, border-color .15s;
+    }
+    .logout-link:hover { color: var(--red); border-color: var(--red); }
+
+    /* ── PAGE WRAPPER ── */
+    .page { position: relative; z-index: 1; }
+    {% block extra_style %}{% endblock %}
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-text">C2<span>//</span>OPS</div>
+    <div class="conn-dot" title="Server online"></div>
+  </div>
+
+  <nav class="topbar-nav">
+    <a class="nav-tab {% if active_page == 'dashboard' %}active{% endif %}" href="/dashboard">[ Sessions ]</a>
+    <a class="nav-tab {% if active_page == 'map' %}active{% endif %}"       href="/map">[ Map ]</a>
+    <a class="nav-tab {% if active_page == 'gallery' %}active{% endif %}"   href="/gallery">[ Gallery ]</a>
+    <a class="nav-tab {% if active_page == 'generator' %}active{% endif %}" href="/generator">[ Generator ]</a>
+    <a class="nav-tab {% if active_page == 'eventlog' %}active{% endif %}"  href="/eventlog">[ Event Log ]</a>
+  </nav>
+
+  <div class="topbar-stats">
+    <div class="tstat s-active">
+      <div class="tstat-val" id="gs-active">—</div>
+      <div class="tstat-label">Active</div>
+    </div>
+    <div class="tstat s-dead">
+      <div class="tstat-val" id="gs-inactive">—</div>
+      <div class="tstat-label">Inactive</div>
+    </div>
+    <div class="tstat s-pending">
+      <div class="tstat-val" id="gs-pending">—</div>
+      <div class="tstat-label">Pending</div>
+    </div>
+    <div class="tstat">
+      <div class="tstat-val" id="gs-completed">—</div>
+      <div class="tstat-label">Done</div>
+    </div>
+  </div>
+
+  <div class="topbar-actions">
+    <div class="op-label">// <span>operator</span></div>
+    <a class="logout-link" href="/logout">[ logout ]</a>
+  </div>
+</header>
+
+<div class="page">
+  {% block content %}{% endblock %}
+</div>
+
+<script>
+  async function refreshGlobalStats() {
+    try {
+      const d = await (await fetch('/api/stats')).json();
+      document.getElementById('gs-active').textContent    = d.active_agents;
+      document.getElementById('gs-inactive').textContent  = d.inactive_agents;
+      document.getElementById('gs-pending').textContent   = d.pending_tasks;
+      document.getElementById('gs-completed').textContent = d.completed_tasks;
+    } catch {}
+  }
+  refreshGlobalStats();
+  setInterval(refreshGlobalStats, 8000);
+  {% block extra_script %}{% endblock %}
+</script>
+</body>
+</html>
