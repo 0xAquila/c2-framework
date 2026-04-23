@@ -1,8 +1,17 @@
+<div align="center">
+
 # C2//OPS Framework
 
 A command-and-control framework built for portfolio demonstration and red team education. Implements real adversary infrastructure techniques — beaconing, C2 profiles, encrypted comms, ECDH forward secrecy, and operator tooling — in a clean, understandable codebase.
 
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-TLS%201.3-black?logo=flask)
+![License](https://img.shields.io/badge/License-Educational-red)
+![Status](https://img.shields.io/badge/Status-Complete-brightgreen)
+
 > **Disclaimer:** This project is for educational purposes and authorized lab use only. Do not deploy against systems you do not own or have explicit written permission to test.
+
+</div>
 
 ---
 
@@ -10,7 +19,7 @@ A command-and-control framework built for portfolio demonstration and red team e
 
 ![Diagram architecture](diagrams/diagram_architecture.png)
 
-![Network map with two active agents](map_2_targets.png)
+![Network map with two active agents](screenshots/map_2_targets.png)
 ---
 
 ## Security Architecture
@@ -44,7 +53,7 @@ The server actively lies. Every visitor type gets a different response:
 | Analyst / scanner | Nothing | NexaCloud decoy site |
 | Anyone hitting `/login` without the header | Nothing | `404 Not Found` (nginx error page) |
 
-![NexaCloud decoy site](decoy_site.png)
+![NexaCloud decoy site](screenshots/decoy_site.png)
 
 ---
 
@@ -131,12 +140,12 @@ The easiest way to inject the header automatically on every request:
 4. Replace: `X-Operator-Key: <your OPERATOR_KEY from .env>`
 5. Set your browser to use Burp's proxy (`127.0.0.1:8080`)
 
-![Burp Suite Match and Replace rule](auto_header_editor.png)
+![Burp Suite Match and Replace rule](screenshots/auto_header_editor.png)
 
 6. Navigate to `https://127.0.0.1:5000` — the server detects the header and redirects to `/login`
 7. Accept the self-signed cert warning, then log in with `OPERATOR_USER` / `OPERATOR_PASS` from `.env`
 
-![Login page with injected header](login_with_header_added.png)
+![Login page with injected header](screenshots/login_with_header_added.png)
 
 ### 6. Deploy an agent
 
@@ -174,9 +183,9 @@ python agent/agent.py
 
 | Screenshot | Event Log |
 |---|---|
-| ![Screenshot gallery](screenshot_tab.png) | ![Event log](event_log.png) |
+| ![Screenshot gallery](screenshots/screenshot_tab.png) | ![Event log](screenshots/event_log.png) |
 
-![Payload generator](payload_gen.png)
+![Payload generator](screenshots/payload_gen.png)
 
 ---
 
@@ -186,11 +195,11 @@ python agent/agent.py
 
 **Without encryption (HTTP)** — Wireshark reads everything:
 
-![Wireshark unencrypted](wireshark_old.png)
+![Wireshark unencrypted](screenshots/wireshark_old.png)
 
 **With TLS + AES** — zero readable content:
 
-![Wireshark encrypted](wireshark_new.png)
+![Wireshark encrypted](screenshots/wireshark_new.png)
 
 ---
 
@@ -218,7 +227,8 @@ c2-framework/
 ├── agent/
 │   ├── agent.py                Hardened agent — ECDH, cert pinning, all commands
 │   └── config.py               Per-deployment configuration
-├── diagrams/                   Architecture and flow diagram screenshots
+├── diagrams/                   Architecture and flow diagrams
+├── screenshots/                Dashboard and feature screenshots
 ├── requirements.txt
 ├── HOW_IT_WORKS.md             Technical deep-dive
 ├── BUILD_PROCESS.md            Build narrative and design decisions

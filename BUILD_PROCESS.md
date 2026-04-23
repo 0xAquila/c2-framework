@@ -132,13 +132,13 @@ The server needed HTTPS because without it, Wireshark shows everything — heade
 
 **Before HTTPS:**
 
-![Before - HTTP plaintext](wireshark_old.png)
+![Before - HTTP plaintext](screenshots/wireshark_old.png)
 
 The `X-Operator-Key`, username, and password were all visible in a packet capture from the same network segment.
 
 **After HTTPS:**
 
-![After - TLS encrypted](wireshark_new.png)
+![After - TLS encrypted](screenshots/wireshark_new.png)
 
 Every packet shows `TLSv1.3  Application Data` — nothing readable.
 
@@ -160,9 +160,9 @@ Without that header, `/login` also returns the decoy. There's no error, no redir
 
 To access the real login page in the lab, I used Burp Suite with a Match and Replace rule to inject the header automatically into every request:
 
-![Burp Match and Replace](auto_header_editor.png)
+![Burp Match and Replace](screenshots/auto_header_editor.png)
 
-![Login page with header injected](login_with_header_added.png)
+![Login page with header injected](screenshots/login_with_header_added.png)
 
 This concept comes directly from how real C2 frameworks like Cobalt Strike use "Malleable C2 Profiles" — the server is configured to respond differently based on what the request looks like.
 

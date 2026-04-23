@@ -34,7 +34,7 @@ Every request that reaches the server is inspected before any content is served.
 
 **If neither header is present** — the visitor sees the NexaCloud decoy site. A convincing fake company page with products, pricing, and an about section. No indication of a C2 server.
 
-![NexaCloud decoy site](decoy_site.png)
+![NexaCloud decoy site](screenshots/decoy_site.png)
 
 This design is borrowed from **Cobalt Strike's Malleable C2 profiles** — the principle that a C2 server should never reveal its purpose to uninvited visitors. Threat analysts, port scanners, and blue team investigators all walk away seeing a corporate website.
 
@@ -50,11 +50,11 @@ All other error conditions (403, 405, 500) also render the same nginx-style erro
 
 The `X-Operator-Key` header must be present on every browser request. Rather than adding it manually, a **Burp Suite Match & Replace** rule injects it automatically into every outgoing request through the proxy:
 
-![Burp Suite Match & Replace rule](auto_header_editor.png)
+![Burp Suite Match & Replace rule](screenshots/auto_header_editor.png)
 
 With the rule active, the browser behaves normally. Every request is silently upgraded with the gateway header before leaving the proxy, and the operator is never prompted about it again.
 
-![Login page with injected header](login_with_header_added.png)
+![Login page with injected header](screenshots/login_with_header_added.png)
 
 ---
 
@@ -87,7 +87,7 @@ From this point, every message between this agent and the server uses the **sess
 
 **Step 4 — Loop.** The agent sleeps for its jitter interval, then polls again.
 
-![Commands executed on a compromised agent](executed_commands.png)
+![Commands executed on a compromised agent](screenshots/executed_commands.png)
 
 ### Resilience
 
@@ -128,15 +128,15 @@ If the fingerprint field contains the placeholder value (`REPLACE_WITH_gen_cert_
 
 **Without encryption (HTTP)** — credentials, commands, and agent identity all visible:
 
-![Wireshark unencrypted traffic](wireshark_old.png)
+![Wireshark unencrypted traffic](screenshots/wireshark_old.png)
 
 **With TLS + AES** — zero readable content:
 
-![Wireshark encrypted traffic](wireshark_new.png)
+![Wireshark encrypted traffic](screenshots/wireshark_new.png)
 
 The certificate was generated using Python's `cryptography` library:
 
-![Certificate generation](cert_creation.png)
+![Certificate generation](screenshots/cert_creation.png)
 
 ### Database Encryption at Rest
 
@@ -176,25 +176,25 @@ The operator dashboard is the central interface for running the campaign.
 
 A live canvas-based visualisation of all connected agents. Each node shows the hostname, IP, and OS. Active agents pulse; inactive agents are dimmed.
 
-![Network map — two active agents](map_2_targets.png)
+![Network map — two active agents](screenshots/map_2_targets.png)
 
 ### Screenshot Capture
 
 The `screenshot` command instructs the agent to capture the victim's current screen using Python Pillow (`ImageGrab`). The image is base64-encoded and transmitted over the encrypted beacon channel. The screenshot gallery tab displays all captured images:
 
-![Screenshot gallery](screenshot_tab.png)
+![Screenshot gallery](screenshots/screenshot_tab.png)
 
 ### Event Log
 
 Every registration, task dispatch, and result is logged with a timestamp and the associated **MITRE ATT&CK technique tag**, making the simulated attack chain fully auditable:
 
-![Event log](event_log.png)
+![Event log](screenshots/event_log.png)
 
 ### Payload Generator
 
 The generator tab produces hardened agent scripts pre-configured to connect back to the active server. The cert fingerprint is embedded automatically. Dropper scripts in six formats (PowerShell, Python, Bash, VBScript, VBA macro) are also available for delivery:
 
-![Payload generator](payload_gen.png)
+![Payload generator](screenshots/payload_gen.png)
 
 ---
 
